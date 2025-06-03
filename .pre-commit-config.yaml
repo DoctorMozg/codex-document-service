@@ -1,0 +1,29 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: 'v0.9.10'
+    hooks:
+      - id: ruff
+        args: ['--fix', '--unsafe-fixes']
+        types: [python]
+      - id: ruff-format
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: 'v1.15.0'
+    hooks:
+      - id: mypy
+        args: [ --config-file, mypy.ini ]
+        types: [python]
+        additional_dependencies: [
+          pydantic,
+        ]
+
+  - repo: https://github.com/MarcoGorelli/absolufy-imports
+    rev: v0.3.1
+    hooks:
+      - id: absolufy-imports

@@ -3,16 +3,8 @@ from uuid import uuid4
 
 import pytest
 
-from drm_document_service.config import AppConfigSchema
 from drm_document_service.logic.embeddings_service import EmbeddingsService
 from drm_document_service.schemas import DocumentPartSchema, EmbeddedDocumentPartSchema
-
-
-@pytest.fixture
-def mock_config():
-    return AppConfigSchema(
-        OPEN_AI_KEY="test-key",
-    )
 
 
 @pytest.fixture
@@ -28,15 +20,6 @@ def embeddings_service(mock_config, monkeypatch):
     monkeypatch.setattr(service, "client", mock_client)
 
     return service
-
-
-@pytest.fixture
-def sample_document_part():
-    return DocumentPartSchema(
-        uid=uuid4(),
-        document_uid=uuid4(),
-        text="Sample text for embedding",
-    )
 
 
 @pytest.mark.asyncio

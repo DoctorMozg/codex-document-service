@@ -18,21 +18,10 @@ def minio_client(minio_container: MinioConfig) -> MinioClient:
 
 
 @pytest.fixture
-def sample_pdf_file(tmp_path: Path) -> Path:
+def sample_pdf_file(tmp_path: Path, sample_pdf_content: bytes) -> Path:
     pdf_file: Path = tmp_path / "sample.pdf"
-    pdf_file.write_bytes(
-        b"%PDF-1.4\n1 0 obj\n<<\n/Type /Catalog\n>>\n"
-        b"endobj\ntrailer\n<<\n/Root 1 0 R\n>>\n%%EOF",
-    )
+    pdf_file.write_bytes(sample_pdf_content)
     return pdf_file
-
-
-@pytest.fixture
-def sample_pdf_data() -> bytes:
-    return (
-        b"%PDF-1.4\n1 0 obj\n<<\n/Type /Catalog\n"
-        b">>\nendobj\ntrailer\n<<\n/Root 1 0 R\n>>\n%%EOF"
-    )
 
 
 def test_initialization(minio_container: MinioConfig) -> None:
@@ -76,11 +65,11 @@ async def test_ensure_bucket_exists_creates_bucket(
 @pytest.mark.asyncio
 async def test_upload_pdf_with_custom_path_success(
     minio_client: MinioClient,
-    sample_pdf_data: bytes,
+    sample_pdf_content: bytes,
 ) -> None:
     object_path: str = "documents/test-uuid/test_document.pdf"
     object_key: str = await minio_client.upload_pdf_with_custom_path(
-        sample_pdf_data,
+        sample_pdf_content,
         object_path,
     )
 
@@ -95,16 +84,16 @@ async def test_upload_pdf_with_custom_path_success(
 @pytest.mark.asyncio
 async def test_download_pdf_success(
     minio_client: MinioClient,
-    sample_pdf_data: bytes,
+    sample_pdf_content: bytes,
 ) -> None:
     object_path: str = "documents/test-uuid/test_document.pdf"
 
-    await minio_client.upload_pdf_with_custom_path(sample_pdf_data, object_path)
+    await minio_client.upload_pdf_with_custom_path(sample_pdf_content, object_path)
 
     downloaded_data: bytes | None = await minio_client.download_pdf(object_path)
 
     assert downloaded_data is not None
-    assert downloaded_data == sample_pdf_data
+    assert downloaded_data == sample_pdf_content
 
 
 @pytest.mark.asyncio
@@ -121,14 +110,14 @@ async def test_download_pdf_nonexistent_file_returns_none(
 @pytest.mark.asyncio
 async def test_list_objects_with_prefix_success(
     minio_client: MinioClient,
-    sample_pdf_data: bytes,
+    sample_pdf_content: bytes,
 ) -> None:
     prefix = "documents/test-uuid/"
     object_path1 = f"{prefix}document1.pdf"
     object_path2 = f"{prefix}document2.pdf"
 
-    await minio_client.upload_pdf_with_custom_path(sample_pdf_data, object_path1)
-    await minio_client.upload_pdf_with_custom_path(sample_pdf_data, object_path2)
+    await minio_client.upload_pdf_with_custom_path(sample_pdf_content, object_path1)
+    await minio_client.upload_pdf_with_custom_path(sample_pdf_content, object_path2)
 
     object_names = await minio_client.list_objects_with_prefix(prefix)
 

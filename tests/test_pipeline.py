@@ -8,11 +8,6 @@ from drm_document_service.schemas import OrchestratorResultSchema
 
 
 @pytest.fixture
-def mock_config() -> AppConfigSchema:
-    return AppConfigSchema()
-
-
-@pytest.fixture
 def pipeline(mock_config: AppConfigSchema) -> DocumentPipeline:
     return DocumentPipeline(mock_config)
 

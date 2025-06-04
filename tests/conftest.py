@@ -1,11 +1,20 @@
 from collections.abc import AsyncGenerator, Generator
 from typing import TypedDict
+from uuid import UUID, uuid4
 
 import pytest
 from minio import Minio
 from qdrant_client import AsyncQdrantClient
 from testcontainers.minio import MinioContainer
 from testcontainers.qdrant import QdrantContainer
+
+from drm_document_service.config import AppConfigSchema
+from drm_document_service.schemas import (
+    DocumentInfoSchema,
+    DocumentPartSchema,
+    DocumentSchema,
+    EmbeddedDocumentPartSchema,
+)
 
 
 class MinioConfig(TypedDict):
@@ -105,3 +114,63 @@ async def cleanup_qdrant(qdrant_container: QdrantConfig) -> AsyncGenerator[None]
         await client.close()
     except Exception:  # noqa: S110, BLE001
         pass
+
+
+@pytest.fixture
+def sample_document_uid() -> UUID:
+    return uuid4()
+
+
+@pytest.fixture
+def sample_pdf_content() -> bytes:
+    return b"%PDF-1.4\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj"
+
+
+@pytest.fixture
+def sample_document_schema(
+    sample_document_uid: UUID,
+    sample_pdf_content: bytes,
+) -> DocumentSchema:
+    return DocumentSchema(
+        uid=sample_document_uid,
+        name="test_document.pdf",
+        body_bytes=sample_pdf_content,
+    )
+
+
+@pytest.fixture
+def sample_document_info(sample_document_uid: UUID) -> DocumentInfoSchema:
+    return DocumentInfoSchema(
+        uid=sample_document_uid,
+        name="test_document.pdf",
+        upload_date="2024-01-01T12:00:00",
+        size_bytes=1024,
+    )
+
+
+@pytest.fixture
+def sample_document_part(sample_document_uid: UUID) -> DocumentPartSchema:
+    return DocumentPartSchema(
+        uid=uuid4(),
+        document_uid=sample_document_uid,
+        text="This is a sample document part content.",
+    )
+
+
+@pytest.fixture
+def sample_embedded_part(
+    sample_document_part: DocumentPartSchema,
+) -> EmbeddedDocumentPartSchema:
+    return EmbeddedDocumentPartSchema(
+        uid=sample_document_part.uid,
+        document_uid=sample_document_part.document_uid,
+        text=sample_document_part.text,
+        embedding=[0.1] * 1536,
+    )
+
+
+@pytest.fixture
+def mock_config() -> AppConfigSchema:
+    return AppConfigSchema(
+        OPEN_AI_KEY="test-key",
+    )

@@ -24,32 +24,16 @@ def document_repository(minio_client: MinioClient) -> DocumentRepository:
     return DocumentRepository(minio_client)
 
 
-@pytest.fixture
-def sample_pdf_data() -> bytes:
-    return (
-        b"%PDF-1.4\n1 0 obj\n<<\n/Type /Catalog\n"
-        b">>\nendobj\ntrailer\n<<\n/Root 1 0 R\n>>\n%%EOF"
-    )
-
-
-@pytest.fixture
-def sample_document(sample_pdf_data: bytes) -> DocumentSchema:
-    return DocumentSchema(
-        uid=uuid4(),
-        name="test_document.pdf",
-        body_bytes=sample_pdf_data,
-    )
-
-
 @pytest.mark.asyncio
 async def test_save_document_success(
     document_repository: DocumentRepository,
-    sample_document: DocumentSchema,
+    sample_document_schema: DocumentSchema,
 ) -> None:
-    storage_path: str = await document_repository.save_document(sample_document)
+    storage_path: str = await document_repository.save_document(sample_document_schema)
 
     expected_path = (
-        f"test-documents/documents/{sample_document.uid}/{sample_document.name}"
+        f"test-documents/documents/{sample_document_schema.uid}/"
+        f"{sample_document_schema.name}"
     )
     assert storage_path == expected_path
 
@@ -57,12 +41,12 @@ async def test_save_document_success(
 @pytest.mark.asyncio
 async def test_save_document_non_pdf_raises_error(
     document_repository: DocumentRepository,
-    sample_pdf_data: bytes,
+    sample_pdf_content: bytes,
 ) -> None:
     document = DocumentSchema(
         uid=uuid4(),
         name="not_a_pdf.txt",
-        body_bytes=sample_pdf_data,
+        body_bytes=sample_pdf_content,
     )
 
     with pytest.raises(ValueError, match="Document name must have .pdf extension"):
@@ -72,18 +56,18 @@ async def test_save_document_non_pdf_raises_error(
 @pytest.mark.asyncio
 async def test_get_document_success(
     document_repository: DocumentRepository,
-    sample_document: DocumentSchema,
+    sample_document_schema: DocumentSchema,
 ) -> None:
-    await document_repository.save_document(sample_document)
+    await document_repository.save_document(sample_document_schema)
 
     retrieved_document: DocumentSchema | None = await document_repository.get_document(
-        sample_document.uid,
+        sample_document_schema.uid,
     )
 
     assert retrieved_document is not None
-    assert retrieved_document.uid == sample_document.uid
-    assert retrieved_document.name == sample_document.name
-    assert retrieved_document.body_bytes == sample_document.body_bytes
+    assert retrieved_document.uid == sample_document_schema.uid
+    assert retrieved_document.name == sample_document_schema.name
+    assert retrieved_document.body_bytes == sample_document_schema.body_bytes
 
 
 @pytest.mark.asyncio
@@ -102,18 +86,18 @@ async def test_get_document_nonexistent_returns_none(
 @pytest.mark.asyncio
 async def test_save_and_retrieve_multiple_documents(
     document_repository: DocumentRepository,
-    sample_pdf_data: bytes,
+    sample_pdf_content: bytes,
 ) -> None:
     document1 = DocumentSchema(
         uid=uuid4(),
         name="document1.pdf",
-        body_bytes=sample_pdf_data,
+        body_bytes=sample_pdf_content,
     )
 
     document2 = DocumentSchema(
         uid=uuid4(),
         name="document2.pdf",
-        body_bytes=sample_pdf_data,
+        body_bytes=sample_pdf_content,
     )
 
     await document_repository.save_document(document1)

@@ -1,5 +1,6 @@
 import logging
 from dataclasses import dataclass
+from typing import cast
 
 from pydantic_ai import Agent, RunContext
 from pydantic_ai.models.openai import OpenAIModel
@@ -22,8 +23,9 @@ logger = logging.getLogger(__name__)
 @dataclass
 class OrchestratorDepsSchema:
     guardrail_agent: Agent[GuardrailDepsSchema, GuardrailResultSchema]
-    retrieval_agent: Agent[RetrievalDepsSchema, RetrievalResultSchema]
     guardrail_deps: GuardrailDepsSchema
+
+    retrieval_agent: Agent[RetrievalDepsSchema, RetrievalResultSchema]
     retrieval_deps: RetrievalDepsSchema
 
 
@@ -33,7 +35,6 @@ async def _check_query_safety(
 ) -> GuardrailResultSchema:
     try:
         result = await ctx.deps.guardrail_agent.run(query, deps=ctx.deps.guardrail_deps)
-        return result.output
     except Exception:
         logger.exception("Failed to check query safety")
         return GuardrailResultSchema(
@@ -41,6 +42,8 @@ async def _check_query_safety(
             reason="Safety check failed",
             confidence=0.0,
         )
+    else:
+        return cast(GuardrailResultSchema, result.output)
 
 
 async def _retrieve_documents(
@@ -49,10 +52,11 @@ async def _retrieve_documents(
 ) -> RetrievalResultSchema:
     try:
         result = await ctx.deps.retrieval_agent.run(query, deps=ctx.deps.retrieval_deps)
-        return result.output
     except Exception:
         logger.exception("Failed to retrieve documents")
         return RetrievalResultSchema(results=[], query=query, total_results=0)
+    else:
+        return cast(RetrievalResultSchema, result.output)
 
 
 def get_orchestrator_agent(
@@ -61,7 +65,7 @@ def get_orchestrator_agent(
     template_context: TemplateContextSchema | None = None,
 ) -> Agent[OrchestratorDepsSchema, OrchestratorResultSchema]:
     if template_context is None:
-        template_context = TemplateContextSchema()
+        template_context = TemplateContextSchema()  # type: ignore
 
     system_prompt = template_manager.render_template(
         "orchestrator_system_prompt.j2",

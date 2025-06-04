@@ -1,5 +1,6 @@
 import logging
 from dataclasses import dataclass
+from typing import cast
 
 from pydantic_ai import Agent, RunContext
 from pydantic_ai.models.openai import OpenAIModel
@@ -40,11 +41,14 @@ async def _semantic_search_tool(
         document parts, limited to 10 results. Returns empty list if search fails.
     """
     try:
-        query_embedding = await ctx.deps.embeddings_service._generate_embedding(query)
+        query_embedding = await ctx.deps.embeddings_service.generate_embedding(query)
 
-        return await ctx.deps.embeddings_repository.search_similar(
-            query_embedding=query_embedding,
-            limit=10,
+        return cast(
+            list[SearchResultSchema],
+            await ctx.deps.embeddings_repository.search_similar(
+                query_embedding=query_embedding,
+                limit=10,
+            ),
         )
 
     except Exception:
@@ -58,7 +62,7 @@ def get_retrieval_agent(
     template_context: TemplateContextSchema | None = None,
 ) -> Agent[RetrievalDepsSchema, RetrievalResultSchema]:
     if template_context is None:
-        template_context = TemplateContextSchema()
+        template_context = TemplateContextSchema()  # type: ignore
 
     system_prompt = template_manager.render_template(
         "retrieval_system_prompt.j2",

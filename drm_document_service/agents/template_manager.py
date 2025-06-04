@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import jinja2
 from pydantic import BaseModel, Field
@@ -20,7 +20,7 @@ class TemplateManager:
         loader = jinja2.FileSystemLoader(str(self.QUERIES_DIR))
         return jinja2.Environment(
             loader=loader,
-            autoescape=False,
+            autoescape=True,
             trim_blocks=True,
             lstrip_blocks=True,
         )
@@ -31,7 +31,7 @@ class TemplateManager:
         context: TemplateContextSchema,
     ) -> str:
         template = self._env.get_template(template_name)
-        return template.render(**context.variables)
+        return cast(str, template.render(**context.variables))  # type: ignore
 
     def render_multiple_templates(
         self,

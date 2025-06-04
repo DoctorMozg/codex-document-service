@@ -80,3 +80,15 @@ class MinioClient:
             return []
         else:
             return object_names
+
+    async def delete_object(self, object_path: str) -> bool:
+        try:
+            await asyncio.to_thread(
+                self._client.remove_object,
+                self.bucket_name,
+                object_path,
+            )
+        except S3Error:
+            return False
+        else:
+            return True

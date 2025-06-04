@@ -24,7 +24,7 @@ def get_guardrail_agent(
     template_context: TemplateContextSchema | None = None,
 ) -> Agent[GuardrailDepsSchema, GuardrailResultSchema]:
     if template_context is None:
-        template_context = TemplateContextSchema()
+        template_context = TemplateContextSchema()  # type: ignore
 
     system_prompt = template_manager.render_template(
         "guardrail_system_prompt.j2",

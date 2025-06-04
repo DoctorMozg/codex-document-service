@@ -1,4 +1,5 @@
 import logging
+from typing import cast
 
 from drm_document_service.agents.guardrail_agent import (
     GuardrailDepsSchema,
@@ -69,7 +70,6 @@ class DocumentPipeline:
                 query,
                 deps=self.orchestrator_deps,
             )
-            return result.output
         except Exception:
             logger.exception("Failed to process query")
             return OrchestratorResultSchema(
@@ -79,6 +79,8 @@ class DocumentPipeline:
                 confidence=0.0,
                 query=query,
             )
+        else:
+            return cast(OrchestratorResultSchema, result.output)
 
 
 def get_pipeline(config: AppConfigSchema | None = None) -> DocumentPipeline:

@@ -23,7 +23,7 @@ class EmbeddingsService:
         self,
         part: DocumentPartSchema,
     ) -> EmbeddedDocumentPartSchema:
-        embedding = await self._generate_embedding(part.text)
+        embedding = await self.generate_embedding(part.text)
         return EmbeddedDocumentPartSchema(
             uid=part.uid,
             document_uid=part.document_uid,
@@ -38,7 +38,7 @@ class EmbeddingsService:
         tasks = [self.embed_document_part(part) for part in parts]
         return await asyncio.gather(*tasks)
 
-    async def _generate_embedding(self, text: str) -> Embeddings:
+    async def generate_embedding(self, text: str) -> Embeddings:
         try:
             response = await self.client.embeddings.create(
                 model=self.config.openai_embedding_model,

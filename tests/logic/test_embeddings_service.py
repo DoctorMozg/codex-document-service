@@ -41,7 +41,7 @@ def sample_document_part():
 
 @pytest.mark.asyncio
 async def test_generate_embedding(embeddings_service):
-    result = await embeddings_service._generate_embedding("test text")
+    result = await embeddings_service.generate_embedding("test text")
 
     assert len(result) == 1536
     assert all(isinstance(x, float) for x in result)

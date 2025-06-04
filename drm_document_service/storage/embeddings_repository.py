@@ -21,9 +21,10 @@ class EmbeddingsRepository:
 
     async def ensure_collection_exists(self) -> None:
         try:
-            await self.qdrant_client._client.get_collection(self.collection_name)
-        except Exception:
-            await self.qdrant_client._client.create_collection(
+            await self.qdrant_client.get_collection(self.collection_name)
+        except Exception:  # noqa: BLE001
+            logger.warning("Collection does not exist, creating it")
+            await self.qdrant_client.create_collection(
                 collection_name=self.collection_name,
                 vectors_config=VectorParams(size=1536, distance=Distance.COSINE),
             )
@@ -40,7 +41,7 @@ class EmbeddingsRepository:
             },
         )
 
-        await self.qdrant_client._client.upsert(
+        await self.qdrant_client.upsert(
             collection_name=self.collection_name,
             points=[point],
         )
@@ -66,7 +67,7 @@ class EmbeddingsRepository:
             for part in embedded_parts
         ]
 
-        await self.qdrant_client._client.upsert(
+        await self.qdrant_client.upsert(
             collection_name=self.collection_name,
             points=points,
         )
@@ -77,7 +78,7 @@ class EmbeddingsRepository:
         limit: int = 10,
     ) -> list[SearchResultSchema]:
         try:
-            results = await self.qdrant_client._client.search(
+            results = await self.qdrant_client.search(
                 collection_name=self.collection_name,
                 query_vector=query_embedding,
                 limit=limit,
@@ -97,8 +98,8 @@ class EmbeddingsRepository:
                         score=result.score,
                     ),
                 )
-
-            return search_results
         except Exception:
             logger.exception("Failed to search similar embeddings")
             return []
+        else:
+            return search_results

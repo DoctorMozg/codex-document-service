@@ -22,6 +22,13 @@ class DocumentSchema(BaseModel):
     body_bytes: bytes
 
 
+class DocumentInfoSchema(BaseModel):
+    uid: UUID
+    name: str
+    upload_date: str
+    size_bytes: int
+
+
 class SearchResultSchema(BaseModel):
     document_part: EmbeddedDocumentPartSchema
     score: float
@@ -53,3 +60,31 @@ class OrchestratorResultSchema(BaseModel):
     is_relevant: bool
     confidence: float
     query: str
+
+
+class QueryRequestSchema(BaseModel):
+    question: Annotated[str, Field(min_length=1)]
+
+
+class QueryResponseSchema(BaseModel):
+    answer: str
+    sources: list[SourceSchema]
+    is_relevant: bool
+    confidence: float
+    query: str
+
+
+class UploadResponseSchema(BaseModel):
+    document_uid: UUID
+    filename: str
+    message: str
+
+
+class DocumentListSchema(BaseModel):
+    documents: list[DocumentInfoSchema]
+    total_count: int
+
+
+class DeleteResponseSchema(BaseModel):
+    message: str
+    document_uid: UUID

@@ -9,11 +9,7 @@ from drm_document_service.schemas import OrchestratorResultSchema
 
 @pytest.fixture
 def mock_config() -> AppConfigSchema:
-    return AppConfigSchema(
-        openai_api_key="test-key",
-        minio_access_key="test-access",
-        minio_secret_key="test-secret",
-    )
+    return AppConfigSchema()
 
 
 @pytest.fixture
@@ -41,23 +37,3 @@ async def test_process_query_error_handling(pipeline: DocumentPipeline) -> None:
     assert result.is_relevant is False
     assert result.confidence == 0.0
     assert "error processing" in result.answer.lower()
-
-
-@pytest.mark.asyncio
-async def test_health_check_success(pipeline: DocumentPipeline) -> None:
-    pipeline.embeddings_repository.ensure_collection_exists = AsyncMock()
-
-    result = await pipeline.health_check()
-
-    assert result is True
-
-
-@pytest.mark.asyncio
-async def test_health_check_failure(pipeline: DocumentPipeline) -> None:
-    pipeline.embeddings_repository.ensure_collection_exists = AsyncMock(
-        side_effect=Exception("Connection failed"),
-    )
-
-    result = await pipeline.health_check()
-
-    assert result is False

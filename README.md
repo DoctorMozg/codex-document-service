@@ -18,17 +18,92 @@ This system is designed as a document-based GPT implementation that provides int
 
 ## Setup
 
+### Local Development
+
 1. Install dependencies:
 
-```bash
-uv sync
-```
+    ```bash
+    uv sync
+    ```
 
 2. Start the service:
 
-```bash
-uv run python server.py
-```
+    ```bash
+    uv run python server.py
+    ```
+
+### Docker Compose (Recommended for Production)
+
+The service can be run using Docker Compose, which includes all required dependencies:
+
+1. **Prerequisites**: Ensure you have Docker and Docker Compose installed on your system.
+
+2. **Environment Setup**: Create a `.env` file in the project root with your OpenAI API key:
+
+    ```bash
+    echo "OPEN_AI_KEY=your-openai-api-key-here" > .env
+    ```
+
+3. **Build and Run**: Start all services using Docker Compose:
+
+    ```bash
+    docker compose -f doc-service.compose.yaml up --build
+    ```
+
+    This will start:
+
+    - **Document Service** (port 8000): The main FastAPI application
+    - **Qdrant** (port 6333): Vector database for document embeddings
+    - **MinIO** (port 9000): Object storage for document files
+
+4. **Access the Service**: The API will be available at `http://localhost:8000`
+
+5. **Stop the Services**:
+
+    ```bash
+    docker compose -f doc-service.compose.yaml down
+    ```
+
+6. **Clean Up** (removes volumes and data):
+
+    ```bash
+    docker compose -f doc-service.compose.yaml down -v
+    ```
+
+### Environment Variables
+
+When running with Docker Compose, the following environment variables are automatically configured:
+
+- `MINIO_HOST=minio`
+- `MINIO_PORT=9000`
+- `MINIO_ACCESS_KEY=drm-document-service`
+- `MINIO_SECRET_KEY=drm-document-service-secret-key`
+- `QDRANT_HOST=qdrant`
+- `QDRANT_PORT=6333`
+- `SERVICE_PORT=8000`
+- `SERVICE_HOST=0.0.0.0`
+
+You only need to provide your `OPEN_AI_KEY` in the `.env` file.
+
+## Architecture Overview
+
+### Processing Steps
+
+1. **Query Reception**: FastAPI endpoint receives the user's question via `/query`
+2. **Pipeline Orchestration**: DocumentPipeline initializes and coordinates the multi-agent workflow
+3. **Safety Validation**: GuardrailAgent validates the query for appropriateness and safety
+4. **Document Retrieval**: RetrievalAgent performs semantic search to find relevant document parts
+5. **Embedding Generation**: EmbeddingsService converts the query into a vector using OpenAI's embedding model
+6. **Similarity Search**: EmbeddingsRepository searches Qdrant vector database for semantically similar content
+7. **Answer Synthesis**: OrchestratorAgent combines retrieved context with LLM reasoning to generate the final answer
+8. **Response Delivery**: Structured response includes the answer, sources, confidence score, and relevance flags
+
+### Key Components
+
+- **🎭 Agent Layer**: Pydantic-AI agents that handle orchestration, safety, and retrieval
+- **🧠 Logic Layer**: Business logic services for embeddings and document processing
+- **💾 Storage Layer**: Repositories managing Qdrant vector database and MinIO object storage
+- **🏗️ Infrastructure**: External services (OpenAI, Qdrant, MinIO) supporting the RAG pipeline
 
 ## CLI Usage
 
@@ -100,15 +175,6 @@ In interactive mode, you can:
 - Execute commands like `health`, `query`, `upload`, `list`, etc.
 - Exit with `exit` or Ctrl+C
 
-### CLI Features
-
-- **Beautiful Output**: Rich formatting with colors, tables, and panels
-- **Progress Indicators**: Visual feedback for long-running operations
-- **Interactive Prompts**: Guided input for required parameters
-- **Error Handling**: Clear error messages with context
-- **File Validation**: Automatic PDF validation and size checks
-- **Confirmation Prompts**: Safety checks for destructive operations
-
 ### Examples
 
 ```bash
@@ -116,12 +182,4 @@ In interactive mode, you can:
 uv run python cli.py upload -f ~/documents/manual.pdf
 uv run python cli.py list-docs
 uv run python cli.py query -q "How do I configure the system?"
-```
-
-## Example Dataset
-
-[PDF files](https://www.kaggle.com/datasets/manisha717/dataset-of-pdf-files)
-
-```bash
-curl -L -o ~/Downloads/dataset-of-pdf-files.zip https://www.kaggle.com/api/v1/datasets/download/manisha717/dataset-of-pdf-files
 ```

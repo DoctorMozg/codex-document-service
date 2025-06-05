@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import logging
 from pathlib import Path
 from uuid import UUID
 
@@ -11,6 +12,8 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.prompt import Confirm, Prompt
 from rich.table import Table
 from starlette import status
+
+logger = logging.getLogger(__name__)
 
 console = Console()
 
@@ -148,14 +151,15 @@ def query(ctx: click.Context, question: str) -> None:
 )
 @click.pass_context
 def upload(ctx: click.Context, file: Path) -> None:
+    file_path = Path(file)
     server = ctx.obj["server"]
 
-    if not file.name.lower().endswith(".pdf"):
+    if not file_path.name.lower().endswith(".pdf"):
         console.print("[red]Only PDF files are supported[/red]")
         return
 
     try:
-        with Path(file).open("rb") as f:
+        with file_path.open("rb") as f:
             files = {"file": (file.name, f, "application/pdf")}
             response = make_request("POST", f"{server}/api/v1/upload", files=files)
 
@@ -330,77 +334,6 @@ def delete(ctx: click.Context, document_id: str, yes: bool) -> None:  # noqa: FB
         )
     else:
         console.print(format_response_error(response))
-
-
-@cli.command()
-@click.pass_context
-def interactive(ctx: click.Context) -> None:  # noqa: C901, PLR0912
-    ctx.obj["server"]
-
-    console.print(
-        Panel(
-            "[bold blue]Interactive Mode[/bold blue]\n"
-            "Type commands or 'help' for options, 'exit' to quit",
-            style="blue",
-        ),
-    )
-
-    while True:
-        try:
-            command = Prompt.ask("\n[bold cyan]docrag>[/bold cyan]", default="help")
-
-            if command.lower() in ["exit", "quit", "q"]:
-                console.print("[yellow]Goodbye![/yellow]")
-                break
-            if command.lower() in ["help", "h"]:
-                table = Table(
-                    title="Available Commands",
-                    show_header=True,
-                    header_style="bold magenta",
-                )
-                table.add_column("Command", style="cyan")
-                table.add_column("Description")
-
-                table.add_row("health", "Check service health")
-                table.add_row("query", "Ask questions about documents")
-                table.add_row("upload", "Upload a PDF document")
-                table.add_row("list", "List all documents")
-                table.add_row("info <doc_id>", "Get document information")
-                table.add_row("download <doc_id>", "Download a document")
-                table.add_row("delete <doc_id>", "Delete a document")
-                table.add_row("help", "Show this help")
-                table.add_row("exit", "Exit interactive mode")
-
-                console.print(table)
-            else:
-                # Parse and execute commands
-                parts = command.split()
-                cmd = parts[0].lower()
-
-                if cmd == "health":
-                    ctx.invoke(health)
-                elif cmd == "query":
-                    ctx.invoke(query)
-                elif cmd == "upload":
-                    ctx.invoke(upload)
-                elif cmd == "list":
-                    ctx.invoke(list_docs)
-                elif cmd == "info" and len(parts) > 1:
-                    ctx.invoke(info, document_id=parts[1])
-                elif cmd == "download" and len(parts) > 1:
-                    ctx.invoke(download, document_id=parts[1])
-                elif cmd == "delete" and len(parts) > 1:
-                    ctx.invoke(delete, document_id=parts[1])
-                else:
-                    console.print(
-                        "[red]Unknown command. Type 'help' for options.[/red]",
-                    )
-
-        except KeyboardInterrupt:
-            console.print("\n[yellow]Goodbye![/yellow]")
-            break
-        except Exception as e:  # noqa: BLE001
-            console.print(f"[red]Error:[/red] {e}")
 
 
 if __name__ == "__main__":

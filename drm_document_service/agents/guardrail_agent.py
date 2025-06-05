@@ -23,6 +23,8 @@ def get_guardrail_agent(
     template_manager: TemplateManager,
     template_context: TemplateContextSchema | None = None,
 ) -> Agent[GuardrailDepsSchema, GuardrailResultSchema]:
+    logger.debug("Creating guardrail agent")
+
     if template_context is None:
         template_context = TemplateContextSchema()  # type: ignore
 
@@ -31,9 +33,12 @@ def get_guardrail_agent(
         template_context,
     )
 
-    return Agent(
+    agent = Agent(
         model=model,
         deps_type=GuardrailDepsSchema,
         output_type=GuardrailResultSchema,
         system_prompt=system_prompt,
     )
+
+    logger.debug("Successfully created guardrail agent")
+    return agent

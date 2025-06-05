@@ -16,20 +16,28 @@ logger = logging.getLogger(__name__)
 
 class EmbeddingsRepository:
     def __init__(self, qdrant_client: QdrantClient, collection_name: str) -> None:
+        logger.debug(
+            "Initializing EmbeddingsRepository with collection: %s",
+            collection_name,
+        )
         self.qdrant_client = qdrant_client
         self.collection_name = collection_name
 
     async def ensure_collection_exists(self) -> None:
+        logger.debug("Ensuring collection exists: %s", self.collection_name)
         try:
             await self.qdrant_client.get_collection(self.collection_name)
+            logger.debug("Collection already exists: %s", self.collection_name)
         except Exception:  # noqa: BLE001
-            logger.warning("Collection does not exist, creating it")
+            logger.info("Collection does not exist, creating: %s", self.collection_name)
             await self.qdrant_client.create_collection(
                 collection_name=self.collection_name,
                 vectors_config=VectorParams(size=1536, distance=Distance.COSINE),
             )
+            logger.info("Successfully created collection: %s", self.collection_name)
 
     async def store_embedding(self, embedded_part: EmbeddedDocumentPartSchema) -> None:
+        logger.debug("Storing single embedding for part: %s", embedded_part.uid)
         await self.ensure_collection_exists()
 
         point = models.PointStruct(
@@ -45,14 +53,17 @@ class EmbeddingsRepository:
             collection_name=self.collection_name,
             points=[point],
         )
+        logger.debug("Successfully stored embedding for part: %s", embedded_part.uid)
 
     async def store_embeddings(
         self,
         embedded_parts: list[EmbeddedDocumentPartSchema],
     ) -> None:
         if not embedded_parts:
+            logger.debug("No embeddings to store")
             return
 
+        logger.info("Storing %d embeddings", len(embedded_parts))
         await self.ensure_collection_exists()
 
         points = [
@@ -71,12 +82,14 @@ class EmbeddingsRepository:
             collection_name=self.collection_name,
             points=points,
         )
+        logger.info("Successfully stored %d embeddings", len(embedded_parts))
 
     async def search_similar(
         self,
         query_embedding: Embeddings,
         limit: int = 10,
     ) -> list[SearchResultSchema]:
+        logger.debug("Searching for similar embeddings with limit: %d", limit)
         try:
             results = await self.qdrant_client.search(
                 collection_name=self.collection_name,
@@ -98,8 +111,13 @@ class EmbeddingsRepository:
                         score=result.score,
                     ),
                 )
+
+            logger.info("Successfully found %d similar embeddings", len(search_results))
         except Exception:
-            logger.exception("Failed to search similar embeddings")
+            logger.exception(
+                "Failed to search similar embeddings with limit: %d",
+                limit,
+            )
             return []
         else:
             return search_results

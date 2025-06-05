@@ -20,7 +20,7 @@ services:
       - 6333:6333
       - 6334:6334
     volumes:
-      - qdrant_data:/qdrant/data
+      - qdrant_data:/qdrant/storage
     networks:
       - doc-service-network
 

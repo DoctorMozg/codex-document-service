@@ -16,6 +16,10 @@ logger = logging.getLogger(__name__)
 
 class EmbeddingsService:
     def __init__(self, config: AppConfigSchema) -> None:
+        logger.debug(
+            "Initializing EmbeddingsService with model: %s",
+            config.openai_embedding_model,
+        )
         self.config = config
         self.client = AsyncOpenAI(api_key=config.openai_api_key)
 
@@ -23,28 +27,48 @@ class EmbeddingsService:
         self,
         part: DocumentPartSchema,
     ) -> EmbeddedDocumentPartSchema:
+        logger.debug(
+            "Embedding document part: %s (text length: %d)",
+            part.uid,
+            len(part.text),
+        )
         embedding = await self.generate_embedding(part.text)
-        return EmbeddedDocumentPartSchema(
+        result = EmbeddedDocumentPartSchema(
             uid=part.uid,
             document_uid=part.document_uid,
             text=part.text,
             embedding=embedding,
         )
+        logger.debug("Successfully embedded document part: %s", part.uid)
+        return result
 
     async def embed_document_parts(
         self,
         parts: list[DocumentPartSchema],
     ) -> list[EmbeddedDocumentPartSchema]:
+        logger.info("Embedding %d document parts", len(parts))
         tasks = [self.embed_document_part(part) for part in parts]
-        return await asyncio.gather(*tasks)
+        results = await asyncio.gather(*tasks)
+        logger.info("Successfully embedded %d document parts", len(results))
+        return results
 
     async def generate_embedding(self, text: str) -> Embeddings:
+        logger.debug("Generating embedding for text length: %d characters", len(text))
         try:
             response = await self.client.embeddings.create(
                 model=self.config.openai_embedding_model,
                 input=text,
             )
-            return TypeAdapter(Embeddings).validate_python(response.data[0].embedding)
+            result = TypeAdapter(Embeddings).validate_python(response.data[0].embedding)
+            logger.debug(
+                "Successfully generated embedding (dimension: %d)",
+                len(result),
+            )
         except Exception:
-            logger.exception("Failed to generate embedding")
+            logger.exception(
+                "Failed to generate embedding for text length: %d",
+                len(text),
+            )
             raise
+        else:
+            return result

@@ -40,10 +40,12 @@ async def _semantic_search_tool(
         A list of SearchResultSchema objects containing the most relevant
         document parts, limited to 10 results. Returns empty list if search fails.
     """
+    logger.debug("Starting semantic search for query length: %d characters", len(query))
     try:
         query_embedding = await ctx.deps.embeddings_service.generate_embedding(query)
+        logger.debug("Generated embedding for search query")
 
-        return cast(
+        results = cast(
             list[SearchResultSchema],
             await ctx.deps.embeddings_repository.search_similar(
                 query_embedding=query_embedding,
@@ -51,9 +53,15 @@ async def _semantic_search_tool(
             ),
         )
 
+        logger.info("Semantic search completed - found %d results", len(results))
     except Exception:
-        logger.exception("Failed to perform semantic search")
+        logger.exception(
+            "Failed to perform semantic search for query length: %d",
+            len(query),
+        )
         return []
+    else:
+        return results
 
 
 def get_retrieval_agent(
@@ -61,6 +69,8 @@ def get_retrieval_agent(
     template_manager: TemplateManager,
     template_context: TemplateContextSchema | None = None,
 ) -> Agent[RetrievalDepsSchema, RetrievalResultSchema]:
+    logger.debug("Creating retrieval agent")
+
     if template_context is None:
         template_context = TemplateContextSchema()  # type: ignore
 
@@ -69,10 +79,13 @@ def get_retrieval_agent(
         template_context,
     )
 
-    return Agent(
+    agent = Agent(
         model=model,
         deps_type=RetrievalDepsSchema,
         output_type=RetrievalResultSchema,
         system_prompt=system_prompt,
         tools=[_semantic_search_tool],
     )
+
+    logger.debug("Successfully created retrieval agent")
+    return agent

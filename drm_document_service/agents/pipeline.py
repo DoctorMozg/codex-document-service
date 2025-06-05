@@ -26,11 +26,14 @@ logger = logging.getLogger(__name__)
 
 class DocumentPipeline:
     def __init__(self, config: AppConfigSchema) -> None:
+        logger.info("Initializing DocumentPipeline")
         self.config = config
         self._initialize_dependencies()
         self._initialize_agents()
+        logger.info("DocumentPipeline initialization completed")
 
     def _initialize_dependencies(self) -> None:
+        logger.debug("Initializing dependencies")
         self.model = get_base_model(self.config)
         self.template_manager = get_template_manager()
         self.embeddings_service = EmbeddingsService(self.config)
@@ -40,8 +43,10 @@ class DocumentPipeline:
             qdrant_client,
             self.config.qdrant_collection_name,
         )
+        logger.debug("Successfully initialized all dependencies")
 
     def _initialize_agents(self) -> None:
+        logger.debug("Initializing agents")
         self.guardrail_agent = get_guardrail_agent(self.model, self.template_manager)
         self.retrieval_agent = get_retrieval_agent(self.model, self.template_manager)
 
@@ -63,15 +68,25 @@ class DocumentPipeline:
             self.template_manager,
         )
         self.orchestrator_deps = orchestrator_deps
+        logger.debug("Successfully initialized all agents")
 
     async def process_query(self, query: str) -> OrchestratorResultSchema:
+        logger.info("Processing query with length: %d characters", len(query))
         try:
             result = await self.orchestrator_agent.run(
                 query,
                 deps=self.orchestrator_deps,
             )
+            orchestrator_result = cast(OrchestratorResultSchema, result.output)
+            logger.info(
+                "Query processing completed - relevant: %s,"
+                " confidence: %.2f, sources: %d",
+                orchestrator_result.is_relevant,
+                orchestrator_result.confidence,
+                len(orchestrator_result.sources),
+            )
         except Exception:
-            logger.exception("Failed to process query")
+            logger.exception("Failed to process query with length: %d", len(query))
             return OrchestratorResultSchema(
                 answer="I apologize, but I encountered an error processing your query.",
                 sources=[],
@@ -80,12 +95,16 @@ class DocumentPipeline:
                 query=query,
             )
         else:
-            return cast(OrchestratorResultSchema, result.output)
+            return orchestrator_result
 
 
 def get_pipeline(config: AppConfigSchema | None = None) -> DocumentPipeline:
+    logger.debug("Creating DocumentPipeline instance")
     if config is None:
         from drm_document_service.config import config as default_config
 
         config = default_config
-    return DocumentPipeline(config)
+
+    pipeline = DocumentPipeline(config)
+    logger.debug("Successfully created DocumentPipeline instance")
+    return pipeline

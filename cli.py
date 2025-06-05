@@ -33,7 +33,7 @@ def make_request(
     method: str,
     url: str,
     show_progress: bool = True,  # noqa: FBT001, FBT002
-    **kwargs,  # noqa: ANN003
+    **kwargs,  # noqa: ANN003  # type: ignore
 ) -> httpx.Response:  # type: ignore
     try:
         if show_progress:

@@ -232,15 +232,6 @@ uv run python cli.py query -q "What is the main topic of the documents?"
 uv run python cli.py query
 ```
 
-### CLI Features
-
-- **Rich Formatting**: Beautiful tables, panels, and progress indicators
-- **Progress Tracking**: Real-time progress for uploads and long operations
-- **Error Handling**: Clear error messages with HTTP status codes
-- **Batch Operations**: Upload multiple files from folders with summary reports
-- **Confirmation Prompts**: Safety prompts for destructive operations
-- **Flexible Input**: Support for both command-line arguments and interactive prompts
-
 ### Examples
 
 ```bash

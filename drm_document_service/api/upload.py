@@ -48,7 +48,10 @@ async def upload_pdf(
 
         await document_repo.save_document(document)
 
-        document_parts = pdf_parser.parse_document(document)
+        document_parts = pdf_parser.parse_document(
+            document,
+            config.max_document_text_length,
+        )
 
         embedded_parts = await embeddings_service.embed_document_parts(document_parts)
 

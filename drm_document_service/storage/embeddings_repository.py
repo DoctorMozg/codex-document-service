@@ -87,7 +87,7 @@ class EmbeddingsRepository:
     async def search_similar(
         self,
         query_embedding: Embeddings,
-        limit: int = 10,
+        limit: int = 4,
     ) -> list[SearchResultSchema]:
         logger.debug("Searching for similar embeddings with limit: %d", limit)
         try:

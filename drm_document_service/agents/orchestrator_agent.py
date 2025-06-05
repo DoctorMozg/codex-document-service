@@ -34,13 +34,13 @@ async def _check_query_safety(
     query: str,
 ) -> GuardrailResultSchema:
     """Check if a query is safe and appropriate for processing.
-    
+
     This tool should be called AFTER document retrieval to validate the query
     along with the retrieved results for comprehensive safety assessment.
-    
+
     Args:
         query: The user query to validate for safety and appropriateness
-    
+
     Returns:
         Safety assessment including whether query is allowed and confidence score
     """
@@ -72,13 +72,13 @@ async def _retrieve_documents(
     query: str,
 ) -> RetrievalResultSchema:
     """Retrieve relevant documents based on the user query.
-    
+
     This tool should be called FIRST to gather relevant documents.
     The results should then be used with the safety check tool for validation.
-    
+
     Args:
         query: The user query to find relevant documents for
-    
+
     Returns:
         Retrieved documents with relevance scores and metadata
     """

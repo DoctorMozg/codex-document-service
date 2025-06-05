@@ -30,7 +30,7 @@ class DocumentInfoSchema(BaseModel):
 
 
 class SearchResultSchema(BaseModel):
-    document_part: EmbeddedDocumentPartSchema
+    document_part: DocumentPartSchema
     score: float
 
 

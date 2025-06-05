@@ -29,22 +29,66 @@ def format_response_error(response: httpx.Response) -> str:
         return f"[red]HTTP {response.status_code}:[/red] {response.text}"
 
 
-def make_request(method: str, url: str, **kwargs) -> httpx.Response:  # type: ignore # noqa: ANN003
+def make_request(
+    method: str,
+    url: str,
+    show_progress: bool = True,
+    **kwargs,
+) -> httpx.Response:  # type: ignore
     try:
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            console=console,
-        ) as progress:
-            task = progress.add_task("Making request...", total=None)
+        if show_progress:
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                console=console,
+            ) as progress:
+                task = progress.add_task("Making request...", total=None)
+                response = httpx.request(method, url, timeout=30.0, **kwargs)
+                progress.update(task, completed=100)
+        else:
             response = httpx.request(method, url, timeout=30.0, **kwargs)
-            progress.update(task, completed=100)
     except httpx.RequestError as e:
         console.print(f"[red]Request failed:[/red] {e}")
         msg = f"Request failed: {e}"
         raise click.ClickException(msg) from e
     else:
         return response
+
+
+def upload_single_file(
+    server: str,
+    file_path: Path,
+    show_progress: bool = True,
+) -> dict[str, str | bool]:
+    try:
+        with file_path.open("rb") as f:
+            files = {"file": (file_path.name, f, "application/pdf")}
+            response = make_request(
+                "POST",
+                f"{server}/api/v1/upload",
+                files=files,
+                show_progress=show_progress,
+            )
+
+        if response.status_code == status.HTTP_200_OK:
+            data = response.json()
+            return {
+                "success": True,
+                "filename": file_path.name,
+                "document_uid": data["document_uid"],
+                "message": data["message"],
+            }
+        return {
+            "success": False,
+            "filename": file_path.name,
+            "error": format_response_error(response),
+        }
+    except Exception as e:  # noqa: BLE001
+        return {
+            "success": False,
+            "filename": file_path.name,
+            "error": str(e),
+        }
 
 
 @click.group()
@@ -149,37 +193,135 @@ def query(ctx: click.Context, question: str) -> None:
     type=click.Path(exists=True, path_type=Path),
     help="PDF file to upload",
 )
+@click.option(
+    "--folder",
+    "-d",
+    type=click.Path(exists=True, file_okay=False, dir_okay=True, path_type=Path),
+    help="Folder containing PDF files to upload",
+)
+@click.option(
+    "--recursive",
+    "-r",
+    is_flag=True,
+    help="Search for PDFs recursively in subdirectories (when using --folder)",
+)
 @click.pass_context
-def upload(ctx: click.Context, file: Path) -> None:
-    file_path = Path(file)
+def upload(
+    ctx: click.Context,
+    file: Path | None,
+    folder: Path | None,
+    recursive: bool,
+) -> None:
     server = ctx.obj["server"]
 
-    if not file_path.name.lower().endswith(".pdf"):
-        console.print("[red]Only PDF files are supported[/red]")
+    if not file and not folder:
+        console.print("[red]Either --file or --folder must be specified[/red]")
         return
 
-    try:
-        with file_path.open("rb") as f:
-            files = {"file": (file.name, f, "application/pdf")}
-            response = make_request("POST", f"{server}/api/v1/upload", files=files)
+    if file and folder:
+        console.print("[red]Cannot specify both --file and --folder[/red]")
+        return
 
-        if response.status_code == status.HTTP_200_OK:
-            data = response.json()
+    if file:
+        file_path = Path(file)
+        if not file_path.name.lower().endswith(".pdf"):
+            console.print("[red]Only PDF files are supported[/red]")
+            return
+
+        result = upload_single_file(server, file_path)
+
+        if result["success"]:
             console.print(
                 Panel(
                     f"[green]✓ Upload successful[/green]\n\n"
-                    f"[bold]Document ID:[/bold] {data['document_uid']}\n"
-                    f"[bold]Filename:[/bold] {data['filename']}\n"
-                    f"[bold]Message:[/bold] {data['message']}",
+                    f"[bold]Document ID:[/bold] {result['document_uid']}\n"
+                    f"[bold]Filename:[/bold] {result['filename']}\n"
+                    f"[bold]Message:[/bold] {result['message']}",
                     title="Upload Result",
                     style="green",
                 ),
             )
         else:
-            console.print(format_response_error(response))
+            console.print(f"[red]Upload failed:[/red] {result['error']}")
 
-    except Exception as e:  # noqa: BLE001
-        console.print(f"[red]Upload failed:[/red] {e}")
+    elif folder:
+        folder_path = Path(folder)
+        pattern = "**/*.pdf" if recursive else "*.pdf"
+        pdf_files = list(folder_path.glob(pattern))
+
+        if not pdf_files:
+            console.print(
+                Panel(
+                    "[yellow]No PDF files found in the specified folder[/yellow]",
+                    title="Upload",
+                    style="yellow",
+                ),
+            )
+            return
+
+        console.print(
+            Panel(
+                f"[blue]Found {len(pdf_files)} PDF file(s) to upload[/blue]",
+                title="Upload Starting",
+                style="blue",
+            ),
+        )
+
+        results = []
+        success_count = 0
+        failed_count = 0
+
+        with Progress(console=console) as progress:
+            task = progress.add_task("Uploading files...", total=len(pdf_files))
+
+            for pdf_file in pdf_files:
+                progress.update(task, description=f"Uploading {pdf_file.name}...")
+                result = upload_single_file(server, pdf_file, show_progress=False)
+                results.append(result)
+
+                if result["success"]:
+                    success_count += 1
+                    console.print(f"[green]✓[/green] {pdf_file.name}")
+                else:
+                    failed_count += 1
+                    console.print(f"[red]✗[/red] {pdf_file.name}: {result['error']}")
+
+                progress.advance(task)
+
+        table = Table(
+            title="Upload Summary",
+            show_header=True,
+            header_style="bold magenta",
+        )
+        table.add_column("File", style="cyan")
+        table.add_column("Status", justify="center")
+        table.add_column("Document ID / Error", style="dim")
+
+        for result in results:
+            if result["success"]:
+                table.add_row(
+                    result["filename"],
+                    "[green]✓ Success[/green]",
+                    result["document_uid"],
+                )
+            else:
+                table.add_row(
+                    result["filename"],
+                    "[red]✗ Failed[/red]",
+                    result["error"],
+                )
+
+        console.print(table)
+
+        console.print(
+            Panel(
+                f"[bold]Total files processed:[/bold] {len(pdf_files)}\n"
+                f"[green]Successful uploads:[/green] {success_count}\n"
+                f"[red]Failed uploads:[/red] {failed_count}",
+                title="Upload Complete",
+                style="green" if failed_count == 0 else "yellow",
+            ),
+        )
 
 
 @cli.command()

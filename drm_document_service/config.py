@@ -31,6 +31,13 @@ class AppConfigSchema(BaseSettings):
 
     max_file_size_mb: int = Field(default=10)
 
+    # RAG retrieval settings
+    max_retrieval_results: int = Field(default=5, alias="MAX_RETRIEVAL_RESULTS")
+    max_document_text_length: int = Field(
+        default=3000,
+        alias="MAX_DOCUMENT_TEXT_LENGTH",
+    )
+
     @property
     def minio_endpoint(self) -> str:
         protocol = "https" if self.minio_secure else "http"

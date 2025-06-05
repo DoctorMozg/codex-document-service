@@ -21,6 +21,24 @@
             "problemMatcher": []
         },
         {
+            "label": "$(server-process) start local server",
+            "type": "shell",
+            "command": "uv run uvicorn drm_document_service.app:app --host 127.0.0.1 --port 8000 --reload",
+            "group": {
+                "kind": "build"
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            },
+            "options": {
+                "statusbar": {
+                    "color": "#E8F5E8"
+                }
+            },
+            "problemMatcher": []
+        },
+        {
             "label": "$(play) start doc-service",
             "type": "shell",
             "command": "docker compose -f doc-service.compose.yaml -p doc-service up",

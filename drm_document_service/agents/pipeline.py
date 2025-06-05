@@ -54,6 +54,8 @@ class DocumentPipeline:
         self.retrieval_deps = RetrievalDepsSchema(
             embeddings_service=self.embeddings_service,
             embeddings_repository=self.embeddings_repository,
+            max_results=self.config.max_retrieval_results,
+            max_text_length=self.config.max_document_text_length,
         )
 
         orchestrator_deps = OrchestratorDepsSchema(

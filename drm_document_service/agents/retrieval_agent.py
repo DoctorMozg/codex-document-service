@@ -16,10 +16,27 @@ from drm_document_service.storage.embeddings_repository import EmbeddingsReposit
 logger = logging.getLogger(__name__)
 
 
+LOG_SHOW_CHARS_MAX = 100
+
+
 @dataclass
 class RetrievalDepsSchema:
     embeddings_service: EmbeddingsService
     embeddings_repository: EmbeddingsRepository
+    max_results: int = 3
+    max_text_length: int = 1000
+
+
+def _truncate_text(text: str, max_length: int = 1000) -> str:
+    if len(text) <= max_length:
+        return text
+
+    truncated = text[:max_length]
+    last_space = truncated.rfind(" ")
+
+    if last_space > max_length * 0.8:
+        return truncated[:last_space] + "..."
+    return truncated + "..."
 
 
 async def _semantic_search_tool(
@@ -38,22 +55,50 @@ async def _semantic_search_tool(
 
     Returns:
         A list of SearchResultSchema objects containing the most relevant
-        document parts, limited to 10 results. Returns empty list if search fails.
+        document parts, limited to configured max_results with truncated text
+        to stay within token limits. Returns empty list if search fails.
     """
     logger.debug("Starting semantic search for query length: %d characters", len(query))
     try:
         query_embedding = await ctx.deps.embeddings_service.generate_embedding(query)
         logger.debug("Generated embedding for search query")
 
-        results = cast(
+        raw_results = cast(
             list[SearchResultSchema],
             await ctx.deps.embeddings_repository.search_similar(
                 query_embedding=query_embedding,
-                limit=10,
+                limit=ctx.deps.max_results,
             ),
         )
 
-        logger.info("Semantic search completed - found %d results", len(results))
+        results = []
+        for result in raw_results:
+            truncated_text = _truncate_text(
+                result.document_part.text,
+                ctx.deps.max_text_length,
+            )
+            truncated_result = SearchResultSchema(
+                document_part=result.document_part.model_copy(
+                    update={"text": truncated_text},
+                ),
+                score=result.score,
+            )
+            results.append(truncated_result)
+
+        logger.debug(
+            "Found parts for query: %s. First 100 chars from parts: %s",
+            query,
+            [
+                result.document_part.text[:LOG_SHOW_CHARS_MAX] + "..."
+                if len(result.document_part.text) > LOG_SHOW_CHARS_MAX
+                else result.document_part.text
+                for result in raw_results
+            ],
+        )
+        logger.info(
+            "Semantic search completed - found %d results with truncated content",
+            len(results),
+        )
     except Exception:
         logger.exception(
             "Failed to perform semantic search for query length: %d",

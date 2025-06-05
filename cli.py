@@ -29,11 +29,11 @@ def format_response_error(response: httpx.Response) -> str:
         return f"[red]HTTP {response.status_code}:[/red] {response.text}"
 
 
-def make_request(
+def make_request(  # type: ignore
     method: str,
     url: str,
     show_progress: bool = True,  # noqa: FBT001, FBT002
-    **kwargs,  # noqa: ANN003  # type: ignore
+    **kwargs,  # noqa: ANN003
 ) -> httpx.Response:  # type: ignore
     try:
         if show_progress:

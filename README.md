@@ -26,10 +26,18 @@ This system is designed as a document-based GPT implementation that provides int
     uv sync
     ```
 
-2. Start the service:
+2. Create environment file:
 
     ```bash
-    uv run python server.py
+    cp .env.example .env
+    ```
+
+    Then edit `.env` to add your OpenAI API key and other required variables.
+
+3. Start the service:
+
+    ```bash
+    uv run uvicorn drm_document_service.app:app --host 127.0.0.1 --port 8000 --reload
     ```
 
 ### Docker Compose (Recommended for Production)
@@ -57,7 +65,7 @@ The service can be run using Docker Compose, which includes all required depende
     - **minio** (port 9000): Object storage for document files
     - **minio console** (port 9001): MinIO web console for storage management
 
-4. **Access the Service**: 
+4. **Access the Service**:
     - **API**: `http://localhost:8000`
     - **MinIO Console**: `http://localhost:9001` (admin interface for file storage)
 
@@ -78,7 +86,7 @@ The service can be run using Docker Compose, which includes all required depende
 The Docker Compose setup creates:
 
 - **Network**: `doc-service-network` (bridge driver) for inter-service communication
-- **Volumes**: 
+- **Volumes**:
   - `minio_data`: Persistent storage for uploaded documents
   - `qdrant_data`: Persistent storage for vector embeddings
 - **Services**: All services run on the same network and can communicate using service names

@@ -32,8 +32,8 @@ def format_response_error(response: httpx.Response) -> str:
 def make_request(
     method: str,
     url: str,
-    show_progress: bool = True,
-    **kwargs,
+    show_progress: bool = True,  # noqa: FBT001, FBT002
+    **kwargs,  # noqa: ANN003
 ) -> httpx.Response:  # type: ignore
     try:
         if show_progress:
@@ -58,7 +58,7 @@ def make_request(
 def upload_single_file(
     server: str,
     file_path: Path,
-    show_progress: bool = True,
+    show_progress: bool = True,  # noqa: FBT001, FBT002
 ) -> dict[str, str | bool]:
     try:
         with file_path.open("rb") as f:
@@ -206,11 +206,11 @@ def query(ctx: click.Context, question: str) -> None:
     help="Search for PDFs recursively in subdirectories (when using --folder)",
 )
 @click.pass_context
-def upload(
+def upload(  # noqa: C901, PLR0912
     ctx: click.Context,
     file: Path | None,
     folder: Path | None,
-    recursive: bool,
+    recursive: bool,  # noqa: FBT001
 ) -> None:
     server = ctx.obj["server"]
 

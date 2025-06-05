@@ -46,7 +46,7 @@ def minio_container() -> Generator[MinioConfig]:
     ):
         yield MinioConfig(
             host=container.get_container_host_ip(),
-            port=container.get_exposed_port(9000),
+            port=int(container.get_exposed_port(9000)),
             access_key="drm-document-service",
             secret_key="drm-document-service-secret-key",  # noqa: S106
         )
@@ -60,7 +60,7 @@ def qdrant_container() -> Generator[QdrantConfig]:
     ) as container:
         yield QdrantConfig(
             host=container.get_container_host_ip(),
-            port=container.get_exposed_port(6334),
+            port=int(container.get_exposed_port(6334)),
             url=f"http://{container.get_container_host_ip()}:{container.get_exposed_port(6334)}",
         )
 

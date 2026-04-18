@@ -1,5 +1,13 @@
 # Document LLM/RAG Service
 
+> A FastAPI-powered RAG service that answers natural-language questions from your PDF collection — with source citations, guardrails, and a multi-agent pipeline built on Pydantic-AI.
+
+[![Python 3.13](https://img.shields.io/badge/python-3.13-blue.svg)](https://www.python.org/downloads/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688.svg)](https://fastapi.tiangolo.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
+[![CI](https://github.com/doctormozg/codex-document-service/actions/workflows/ci.yml/badge.svg)](https://github.com/doctormozg/codex-document-service/actions/workflows/ci.yml)
+
 ## Overview
 
 ### Design Philosophy

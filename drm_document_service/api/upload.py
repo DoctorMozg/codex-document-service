@@ -28,6 +28,7 @@ async def upload_pdf(
     pdf_parser: PdfParserServiceDep,
     file: Annotated[UploadFile, File()] = ...,
 ) -> UploadResponseSchema:
+    """Upload a PDF, parse it into chunks, and index embeddings for retrieval."""
     if not file.filename or not file.filename.endswith(".pdf"):
         raise InvalidFileTypeError(file.filename or "unknown")
 

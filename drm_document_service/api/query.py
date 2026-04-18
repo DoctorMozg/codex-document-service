@@ -12,6 +12,7 @@ async def query_documents(
     request: QueryRequestSchema,
     pipeline: DocumentPipelineDep,
 ) -> QueryResponseSchema:
+    """Answer a natural-language question using the indexed document corpus."""
     try:
         result = await pipeline.process_query(request.question)
 

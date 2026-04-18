@@ -29,6 +29,7 @@ def create_app() -> FastAPI:
 
     @app.get("/health")
     async def health_check() -> dict[str, str]:
+        """Liveness probe returning service identity and status."""
         return {"status": "healthy", "service": "document-rag-service"}
 
     return app

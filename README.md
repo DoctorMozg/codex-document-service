@@ -1,5 +1,13 @@
 # Document LLM/RAG Service
 
+> A FastAPI-powered RAG service that answers natural-language questions from your PDF collection — with source citations, guardrails, and a multi-agent pipeline built on Pydantic-AI.
+
+[![Python 3.13](https://img.shields.io/badge/python-3.13-blue.svg)](https://www.python.org/downloads/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688.svg)](https://fastapi.tiangolo.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
+[![CI](https://github.com/doctormozg/codex-document-service/actions/workflows/ci.yml/badge.svg)](https://github.com/doctormozg/codex-document-service/actions/workflows/ci.yml)
+
 ## Overview
 
 ### Design Philosophy
@@ -144,6 +152,41 @@ You only need to provide your `OPEN_AI_KEY` in the `.env` file.
 
 ## Architecture Overview
 
+### System Components
+
+```mermaid
+flowchart LR
+    Client([Client / CLI])
+    API[FastAPI<br/>/query · /upload · /documents]
+    Pipeline[DocumentPipeline]
+
+    subgraph Agents [Pydantic-AI Agents]
+        Orch[Orchestrator]
+        Guard[Guardrail]
+        Retr[Retrieval]
+    end
+
+    Embed[EmbeddingsService]
+    Parser[PdfParserService]
+    Qdrant[(Qdrant<br/>vector DB)]
+    Minio[(MinIO<br/>object storage)]
+    OpenAI[(OpenAI<br/>LLM + embeddings)]
+
+    Client --> API
+    API --> Pipeline
+    API --> Parser
+    API --> Minio
+    Parser --> Embed
+    Pipeline --> Orch
+    Orch --> Guard
+    Orch --> Retr
+    Retr --> Embed
+    Retr --> Qdrant
+    Embed --> OpenAI
+    Orch --> OpenAI
+    Guard --> OpenAI
+```
+
 ### Processing Steps
 
 1. **Query Reception**: FastAPI endpoint receives the user's question via `/query`
@@ -154,6 +197,37 @@ You only need to provide your `OPEN_AI_KEY` in the `.env` file.
 6. **Similarity Search**: EmbeddingsRepository searches Qdrant vector database for semantically similar content
 7. **Answer Synthesis**: OrchestratorAgent combines retrieved context with LLM reasoning to generate the final answer
 8. **Response Delivery**: Structured response includes the answer, sources, confidence score, and relevance flags
+
+### Query Flow
+
+```mermaid
+sequenceDiagram
+    participant U as Client
+    participant API as FastAPI /query
+    participant O as Orchestrator
+    participant G as Guardrail
+    participant R as Retrieval
+    participant E as Embeddings
+    participant Q as Qdrant
+    participant L as OpenAI
+
+    U->>API: POST /query {question}
+    API->>O: run(question)
+    O->>G: validate(question)
+    G-->>O: safe / blocked
+    O->>R: retrieve(question)
+    R->>E: embed(question)
+    E->>L: embeddings API
+    L-->>E: vector
+    E-->>R: vector
+    R->>Q: similarity search
+    Q-->>R: top-k chunks
+    R-->>O: context
+    O->>L: synthesize answer
+    L-->>O: answer + confidence
+    O-->>API: answer, sources, is_relevant
+    API-->>U: QueryResponseSchema
+```
 
 ### Key Components
 

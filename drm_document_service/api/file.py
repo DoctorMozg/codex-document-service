@@ -18,6 +18,7 @@ router = APIRouter()
 async def list_documents(
     document_repo: DocumentRepositoryDep,
 ) -> DocumentListSchema:
+    """List all indexed documents with basic metadata."""
     documents = await document_repo.list_documents()
 
     document_infos = [
@@ -41,6 +42,7 @@ async def get_document_info(
     document_uid: UUID,
     document_repo: DocumentRepositoryDep,
 ) -> DocumentInfoSchema:
+    """Return metadata for a single document by its UID."""
     document_info = await document_repo.get_document_info(document_uid)
 
     if not document_info:
@@ -59,6 +61,7 @@ async def download_document(
     document_uid: UUID,
     document_repo: DocumentRepositoryDep,
 ) -> Response:
+    """Download the original PDF for a given document UID."""
     document = await document_repo.get_document(document_uid)
 
     if not document:
@@ -76,6 +79,7 @@ async def delete_document(
     document_uid: UUID,
     document_repo: DocumentRepositoryDep,
 ) -> DeleteResponseSchema:
+    """Remove a document and its associated embeddings from storage."""
     deleted = await document_repo.delete_document(document_uid)
 
     if not deleted:

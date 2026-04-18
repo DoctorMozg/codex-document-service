@@ -1,7 +1,7 @@
 [project]
 name = "document-llm-rag-service"
 version = "0.1.0"
-description = "Add your description here"
+description = "A document-based RAG service using semantic search and LLMs for intelligent Q&A over internal documents."
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
